@@ -1,0 +1,106 @@
+﻿@page "/students"
+@inject HttpClient httpClient
+
+<h3>Student</h3>
+
+<button class="btn btn-primary mb-3" @onclick="Add">New Student</button>
+<div class="row">
+    <div class="col col-4">
+        <input @bind-value="newStudent.FirstName" class="form-control mb-3" placeholder="First Name" />
+        <input @bind-value="newStudent.LastName" class="form-control mb-3" placeholder="Last Name" />
+        <input @bind-value="newStudent.Department" class="form-control mb-3" placeholder="Department" />
+        <button @onclick="SubmitStudent" class="btn btn-primary btn-block">Submit</button>
+    </div>
+
+    <div class="col col-8">
+        @if (student == null)
+        {
+            <p><em>Loading....</em></p>
+        }
+        else
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Depatment</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in student)
+                    {
+                        <tr>
+                            <td>@item.StudentId</td>
+                            <td>@item.FirstName</td>
+                            <td>@item.LastName</td>
+                            <td>@item.Department</td>
+                            <td>
+                                <button @onclick="@(()=>Edit(item.StudentId))" class="btn btn-sm btn-primary">Edit</button>
+                            </td>
+                            <td>
+                                <button @onclick="@(()=>Delete(item.StudentId))" class="btn btn-sm btn-primary">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    CURD.Application.Shared.Student[] student;
+    CURD.Application.Shared.Student newStudent = new CURD.Application.Shared.Student();
+    string baseUrl = "https://localhost:5001/";
+
+    private bool edit = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+    protected async Task Load()
+    {
+        student = await httpClient.GetFromJsonAsync<CURD.Application.Shared.Student[]>($"{baseUrl}api/student");
+    }
+    protected async Task SubmitStudent()
+    {
+        string endpoint = $"{baseUrl}api/student";
+        if (edit == false)
+        {
+            newStudent.StudentId = Guid.NewGuid().ToString();
+            await httpClient.PostAsJsonAsync<CURD.Application.Shared.Student>(endpoint, newStudent);
+            await Load();
+            newStudent = new Application.Shared.Student();
+        }
+        else
+        {
+            await httpClient.PutAsJsonAsync<CURD.Application.Shared.Student>(endpoint + "/" + newStudent.StudentId, newStudent);
+            await Load();
+            edit = false;
+            newStudent = new Application.Shared.Student();
+        }
+    }
+    protected async Task Delete(string id)
+    {
+        string endpoint = $"{baseUrl}api/student/{id}";
+        await httpClient.DeleteAsync(endpoint);
+        await Load();
+    }
+    protected async Task Edit(string id)
+    {
+        string endpoint = $"{baseUrl}api/student/{id}";
+        newStudent = await httpClient.GetFromJsonAsync<CURD.Application.Shared.Student>(endpoint);
+        edit = true;
+    }
+
+    protected void Add()
+    {
+        newStudent = new Application.Shared.Student();
+        edit = false;
+    }
+}
